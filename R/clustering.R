@@ -25,8 +25,8 @@ clusterVafs <- function(vafs.merged, vafMatrix, varMatrix, refMatrix, maximumClu
 
   ##check for suitable method
   apply.uncertainty.self.overlap.condition <- TRUE
-  apply.min.items.condition <- TRUE
-  apply.overlapping.std.dev.condition <- TRUE
+  apply.min.items.condition <- FALSE
+  apply.overlapping.std.dev.condition <- FALSE
   if(!is.null(params)){
     if(grepl("no.uncertainty.overlap.detection",params)){
       cat("Disable uncertainty overlap detection\n")
@@ -378,7 +378,7 @@ reorderBinomialClust <- function(clust, ord) {
 ##--------------------------------------------------------------------------
 ## Do clustering with binomial bmm (binomial bayesian mixture model)
 ##
-clusterWithBinomialBmm <- function(vafs.merged, vafs, vars, refs, initialClusters=10, samples=1, plotIntermediateResults=0, verbose=TRUE, overlap.threshold=0.7,apply.uncertainty.self.overlap.condition=TRUE, apply.min.items.condition=TRUE, apply.overlapping.std.dev.condition = TRUE) { 
+clusterWithBinomialBmm <- function(vafs.merged, vafs, vars, refs, initialClusters=10, samples=1, plotIntermediateResults=0, verbose=TRUE, overlap.threshold=0.7,apply.uncertainty.self.overlap.condition=FALSE, apply.min.items.condition=FALSE, apply.overlapping.std.dev.condition = FALSE) { 
     suppressPackageStartupMessages(library(bmm))
 
     initialClusters=initialClusters
@@ -393,7 +393,6 @@ clusterWithBinomialBmm <- function(vafs.merged, vafs, vars, refs, initialCluster
 
     ## Initialize the hyperparameters of the Binomial mixture model.
     hyperparams <- init.binomial.bmm.hyperparameters(vars, total.trials, initialClusters)
-
     ## Initialize the parameters of the bmm.
     params <- init.binomial.bmm.parameters(vars, total.trials, initialClusters, hyperparams$a0, hyperparams$b0, hyperparams$alpha0, verbose=TRUE)
 
@@ -723,7 +722,6 @@ bmm.filter.clusters <- function(vafs.merged, X, N.c, r, mu, alpha, nu, beta, c, 
                                 convergence.threshold = 10^-4, max.iterations = 10000, verbose = 0,
                                 plotIntermediateResults = 0, overlap.threshold=0.7, apply.pvalue.outlier.condition = TRUE,
                                 outlier.pvalue.threshold=0.01, apply.uncertainty.self.overlap.condition = TRUE, apply.min.items.condition=TRUE, apply.overlapping.std.dev.condition = TRUE){
-
     total.iterations <- 0
     N <- dim(X)[1]
     num.dimensions <- dim(X)[2]
@@ -1458,13 +1456,13 @@ bmm.filter.clusters <- function(vafs.merged, X, N.c, r, mu, alpha, nu, beta, c, 
 ## ##
 binomial.bmm.filter.clusters <- function(vafs.merged, vafs, successes, total.trials, N.c, r, a, b, alpha, a0, b0, alpha0,
                                 convergence.threshold = 10^-4, max.iterations = 10000, verbose = 0,
-                                plotIntermediateResults = 0, overlap.threshold=0.7, apply.uncertainty.self.overlap.condition = TRUE, apply.min.items.condition = TRUE, apply.overlapping.std.dev.condition = TRUE) {
-
+                                plotIntermediateResults = 0, overlap.threshold=0.95, apply.uncertainty.self.overlap.condition = TRUE, apply.min.items.condition = TRUE, apply.overlapping.std.dev.condition = TRUE) {
 
   total.iterations <- 0
   num.dimensions <- dim(successes)[2]
 
   #effective.overlap.threshold = min(overlap.threshold^(1/num.dimensions), 0.8)
+  overlap.threshold = 0.95
   effective.overlap.threshold = (overlap.threshold^(1/num.dimensions))
   cat("Using threshold: ", effective.overlap.threshold, "\n")
   
@@ -1497,7 +1495,7 @@ binomial.bmm.filter.clusters <- function(vafs.merged, vafs, successes, total.tri
 
     E.pi <- bmm.res$E.pi
     r <- bmm.res$r
-
+    
     total.iterations <- total.iterations + bmm.res$num.iterations
 
     ln.rho <- bmm.res$ln.rho
@@ -1657,7 +1655,6 @@ binomial.bmm.filter.clusters <- function(vafs.merged, vafs, successes, total.tri
       a0 <- matrix(a0[indices.to.keep,], nrow=N.c, ncol=num.dimensions)
       b0 <- matrix(b0[indices.to.keep,], nrow=N.c, ncol=num.dimensions)
       alpha0 <- alpha0[indices.to.keep,drop=FALSE]
-
       E.pi.prev <- E.pi
     }
     if(do.inner.iteration == FALSE) { break }
