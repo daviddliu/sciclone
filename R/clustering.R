@@ -1488,9 +1488,6 @@ binomial.bmm.filter.clusters <- function(vafs.merged, vafs, successes, total.tri
     if(bmm.res$retVal != 0) {
       stop("Failed to converge!\n")
     }
-    if(fixed.num.clusters){
-      break
-    }
 
     a <- bmm.res$a
     b <- bmm.res$b
@@ -1523,6 +1520,8 @@ binomial.bmm.filter.clusters <- function(vafs.merged, vafs, successes, total.tri
     remove.data.from.small.clusters <- FALSE
 
     clusters <- hardClusterAssignments(N,1:N.c,r)
+    
+    if(fixed.num.clusters){break}
 
     indices.to.keep <- rep(TRUE, N.c)
     if((apply.min.items.condition == TRUE) & (N.c > 1)) {
@@ -1661,7 +1660,6 @@ binomial.bmm.filter.clusters <- function(vafs.merged, vafs, successes, total.tri
       E.pi.prev <- E.pi
     }
     if(do.inner.iteration == FALSE) { break }
-
   }
 
   retList <- list("retVal" = 0, "a" = a, "b" = b, "alpha" = alpha, "r" = r, "num.iterations" = total.iterations, "ln.rho" = ln.rho, "E.lnpi" = E.lnpi, "E.pi" = E.pi, "outliers" = outliers)
