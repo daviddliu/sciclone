@@ -21,7 +21,7 @@
 ##           Y values should be scaled between 0 and 1
 ##   individual.fits.y = a list of length number_of_clusters, holding the individual fits for each of the models, each represented by an M x P matrix (as for fit.y)
 
-clusterVafs <- function(vafs.merged, vafMatrix, varMatrix, refMatrix, maximumClusters, method="bmm", params=NULL, samples=1, plotIntermediateResults = 0, verbose=0){
+clusterVafs <- function(vafs.merged, vafMatrix, varMatrix, refMatrix, maximumClusters, method="bmm", params=NULL, samples=1, plotIntermediateResults = 0, verbose=0, fixedNumClusters=FALSE){
 
   ##check for suitable method
   apply.uncertainty.self.overlap.condition <- TRUE
@@ -88,10 +88,10 @@ clusterVafs <- function(vafs.merged, vafMatrix, varMatrix, refMatrix, maximumClu
       params=strsplit(params,", *",perl=TRUE)[[1]]
       if(grepl("overlap.threshold",params)){
         val = as.numeric(strsplit(params[grep("overlap.threshold",params)] ," *= *",perl=TRUE)[[1]][2])
-        return(clusterWithBinomialBmm(vafs.merged, vafMatrix, varMatrix, refMatrix, samples=samples, plotIntermediateResults=plotIntermediateResults, verbose=0, overlap.threshold=val,initialClusters=maximumClusters,apply.uncertainty.self.overlap.condition=apply.uncertainty.self.overlap.condition,apply.min.items.condition=apply.min.items.condition,apply.overlapping.std.dev.condition=apply.overlapping.std.dev.condition))
+        return(clusterWithBinomialBmm(vafs.merged, vafMatrix, varMatrix, refMatrix, samples=samples, plotIntermediateResults=plotIntermediateResults, verbose=0, overlap.threshold=val,initialClusters=maximumClusters,apply.uncertainty.self.overlap.condition=apply.uncertainty.self.overlap.condition,apply.min.items.condition=apply.min.items.condition,apply.overlapping.std.dev.condition=apply.overlapping.std.dev.condition, fixed.num.clusters = fixedNumClusters))
       }
     }
-    return(clusterWithBinomialBmm(vafs.merged, vafMatrix, varMatrix, refMatrix, samples=samples, plotIntermediateResults=plotIntermediateResults, verbose=0,initialClusters=maximumClusters,apply.uncertainty.self.overlap.condition=apply.uncertainty.self.overlap.condition,apply.min.items.condition=apply.min.items.condition,apply.overlapping.std.dev.condition=apply.overlapping.std.dev.condition))
+    return(clusterWithBinomialBmm(vafs.merged, vafMatrix, varMatrix, refMatrix, samples=samples, plotIntermediateResults=plotIntermediateResults, verbose=0,initialClusters=maximumClusters,apply.uncertainty.self.overlap.condition=apply.uncertainty.self.overlap.condition,apply.min.items.condition=apply.min.items.condition,apply.overlapping.std.dev.condition=apply.overlapping.std.dev.condition, fixed.num.clusters = fixedNumClusters))
 
 
   } else if(method == "gaussian.bmm"){
@@ -378,7 +378,7 @@ reorderBinomialClust <- function(clust, ord) {
 ##--------------------------------------------------------------------------
 ## Do clustering with binomial bmm (binomial bayesian mixture model)
 ##
-clusterWithBinomialBmm <- function(vafs.merged, vafs, vars, refs, initialClusters=10, samples=1, plotIntermediateResults=0, verbose=TRUE, overlap.threshold=0.7,apply.uncertainty.self.overlap.condition=FALSE, apply.min.items.condition=FALSE, apply.overlapping.std.dev.condition = FALSE) { 
+clusterWithBinomialBmm <- function(vafs.merged, vafs, vars, refs, initialClusters=10, samples=1, plotIntermediateResults=0, verbose=TRUE, overlap.threshold=0.7,apply.uncertainty.self.overlap.condition=FALSE, apply.min.items.condition=FALSE, apply.overlapping.std.dev.condition = FALSE, fixed.num.clusters = FALSE) { 
     suppressPackageStartupMessages(library(bmm))
 
     initialClusters=initialClusters
@@ -398,7 +398,7 @@ clusterWithBinomialBmm <- function(vafs.merged, vafs, vars, refs, initialCluster
 
     ## Perform the clustering.
     ## Start with the provided number of clusters, but prune any with low probability
-    bmm.results <- binomial.bmm.filter.clusters(vafs.merged, vafs, vars, total.trials, initialClusters, params$r, params$a, params$b, params$alpha, hyperparams$a0, hyperparams$b0, hyperparams$alpha0, convergence.threshold = 10^-4, max.iterations = 10000, verbose = verbose, plotIntermediateResults=plotIntermediateResults, overlap.threshold=overlap.threshold, apply.uncertainty.self.overlap.condition=apply.uncertainty.self.overlap.condition,apply.min.items.condition=apply.min.items.condition,apply.overlapping.std.dev.condition=apply.overlapping.std.dev.condition)
+    bmm.results <- binomial.bmm.filter.clusters(vafs.merged, vafs, vars, total.trials, initialClusters, params$r, params$a, params$b, params$alpha, hyperparams$a0, hyperparams$b0, hyperparams$alpha0, convergence.threshold = 10^-4, max.iterations = 10000, verbose = verbose, plotIntermediateResults=plotIntermediateResults, overlap.threshold=overlap.threshold, apply.uncertainty.self.overlap.condition=apply.uncertainty.self.overlap.condition,apply.min.items.condition=apply.min.items.condition,apply.overlapping.std.dev.condition=apply.overlapping.std.dev.condition,fixed.num.clusters=fixed.num.clusters)
     if(bmm.results$retVal != 0) {
         cat("WARNING: bmm failed to converge. No clusters assigned\n")
         return(NULL);
@@ -1456,7 +1456,7 @@ bmm.filter.clusters <- function(vafs.merged, X, N.c, r, mu, alpha, nu, beta, c, 
 ## ##
 binomial.bmm.filter.clusters <- function(vafs.merged, vafs, successes, total.trials, N.c, r, a, b, alpha, a0, b0, alpha0,
                                 convergence.threshold = 10^-4, max.iterations = 10000, verbose = 0,
-                                plotIntermediateResults = 0, overlap.threshold=0.95, apply.uncertainty.self.overlap.condition = TRUE, apply.min.items.condition = TRUE, apply.overlapping.std.dev.condition = TRUE) {
+                                plotIntermediateResults = 0, overlap.threshold=0.95, apply.uncertainty.self.overlap.condition = TRUE, apply.min.items.condition = TRUE, apply.overlapping.std.dev.condition = TRUE, fixed.num.clusters = FALSE) {
 
   total.iterations <- 0
   num.dimensions <- dim(successes)[2]
@@ -1487,6 +1487,9 @@ binomial.bmm.filter.clusters <- function(vafs.merged, vafs, successes, total.tri
     bmm.res <- binomial.bmm.fixed.num.components(successes, total.trials, N.c, r, a, b, alpha, a0, b0, alpha0, convergence.threshold, max.iterations = 10000, verbose = verbose)
     if(bmm.res$retVal != 0) {
       stop("Failed to converge!\n")
+    }
+    if(fixed.num.clusters){
+      break
     }
 
     a <- bmm.res$a

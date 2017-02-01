@@ -7,7 +7,8 @@ sciClone <- function(vafs, copyNumberCalls=NULL, regionsToExclude=NULL,
                      cnCallsAreLog2=FALSE,
                      useSexChrs=TRUE, doClustering=TRUE, verbose=TRUE,
                      copyNumberMargins=0.25, maximumClusters=10, annotation=NULL,
-                     doClusteringAlongMargins=TRUE, plotIntermediateResults=0){
+                     doClusteringAlongMargins=TRUE, plotIntermediateResults=0,
+                     fixedNumClusters=FALSE){
 
   if(verbose){print("checking input data...")}
 
@@ -218,7 +219,7 @@ sciClone <- function(vafs, copyNumberCalls=NULL, regionsToExclude=NULL,
     print("clustering each dimension independently")
     for(i in 1:dimensions){
       marginalClust[[i]]=clusterVafs(NULL, vafs.matrix[,i,drop=FALSE], vars.matrix[,i,drop=FALSE], refs.matrix[,i,drop=FALSE],
-                     maximumClusters, clusterMethod, clusterParams, FALSE)
+                     maximumClusters, clusterMethod, clusterParams, FALSE, fixedNumClusters=fixedNumClusters)
       if(verbose){print(paste("finished 1d clustering", sampleNames[i], "..."))}
       numClusters = max(marginalClust[[i]]$cluster.assignments,na.rm=T)
       print(paste("found",numClusters,"clusters using", clusterMethod, "in dimension",sampleNames[i]))
@@ -238,7 +239,7 @@ sciClone <- function(vafs, copyNumberCalls=NULL, regionsToExclude=NULL,
   if(doClustering){
     if(verbose){print("clustering...")}
     clust=clusterVafs(vafs.merged.cn2, vafs.matrix, vars.matrix, refs.matrix, maximumClusters, clusterMethod, clusterParams,
-      samples=length(purities), plotIntermediateResults=plotIntermediateResults, verbose=0)
+      samples=length(purities), plotIntermediateResults=plotIntermediateResults, verbose=0, fixedNumClusters=fixedNumClusters)
     if(is.null(clust[[1]])) {
       print("Warning: no clusters, returning NULL")
       return(NULL)
